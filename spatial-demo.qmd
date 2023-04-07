@@ -1,0 +1,27 @@
+---
+title: "Mapping Oceanographic Data with R"
+format: html
+editor: visual
+---
+Goal: Plot spatially referenced point and polygon data on a basemap (google earth or bathymetry)
+
+# Libraries we'll use
+
+```{r}
+library(tidyverse)
+library(ggmap)
+library(maptools)
+library(sp)
+library(sf)
+```
+
+# Importing data and formatting for spatial use
+
+# Build a basemap
+
+# Plot points on a spatial grid
+
+# Add polygons
+
+# Working with rasters (if time)
+
