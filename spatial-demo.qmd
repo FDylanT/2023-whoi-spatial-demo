@@ -10,7 +10,6 @@ Goal: Plot spatially referenced point and polygon data on a basemap (google eart
 
 ```{r}
 library(tidyverse)
-library(sp) # working on eliminating from my code -- one function left
 library(sf)
 library(ggmap)
 library(marmap)
@@ -56,26 +55,17 @@ oct$Long <- -(Long_split_oct$V1 + Long_split_oct$V2)
 
 ## Convert cruise data to a simple features object
 
-"Simple Features" is a commonly used set of GIS standards for storing and accessing data representing two-dimensional geographic features (e.g. points, lines, polygons).
+"Simple Features" is a commonly used set of GIS standards for storing and accessing data representing predominantly two-dimensional geographic features (e.g. points, lines, polygons).
 
 ```{r}
-# create SpatialPoints object from lat/long coordinates
-station_SPDF <- SpatialPointsDataFrame(coords = oct[ , c("Long",
-                                                         "Lat")],
-                                       data = oct[ , c("Long",
-                                                       "Lat",
-                                                       "Station",
-                                                       "Tow")],
-                                       proj4string = CRS("EPSG:4326"))
+# create geometry column in data frame from lat/long data
+for(i in 1:nrow(oct)) {
+  oct$geometry[i] <- st_point(x = c(oct$Long[i], oct$Lat[i])) %>%
+    st_sfc(crs = 4326)
+}
 
-
-
-station_sf2 <- st_sf(oct,
-                     crs = 4326,
-                     sf_column_name = "Long")
-
-# convert SpatialPoints object to an sf object
-station_sf <- st_as_sf(station_SPDF)
+# create an sf object from data frame
+station_sf <- st_sf(oct, crs = 4326)
 ```
 
 # Build a basemap
@@ -130,11 +120,13 @@ Georges
 
 ## Change the depth scale to shades of blue
 ```{r}
-Georges +
+Georges <- Georges +
   scale_fill_manual(values = c("#08306B", "#084184", "#08519C", "#1561A9",
                                "#2171B5", "#3282BE", "#4292C6", "#57A0CE",
                                "#6BAED6", "#85BCDC", "#9ECAE1", "#B2D3E8",
                                "#C6DBEF"))
+
+Georges
 ```
 
 ## Use a higher-resolution coastline
@@ -142,18 +134,17 @@ Georges +
 GSHHG (Global Self-consistent, Hierarchical, High-resolution Geography) shoreline data can be downloaded from https://www.ngdc.noaa.gov/mgg/shorelines/data/gshhg/latest/.
 
 ```{r}
-mass <- st_read("/Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/library/gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp") %>%
-  st_make_valid() #%>%
-  st_crop(xmin = -73.5, xmax = -63.5, ymin = 38, ymax = 46)
-  
+# turn off spherical geometry to avoid "duplicate vertex" errors
+## (many polygons cannot be valid on S2 and R2 simultaneously, as outlined here: https://r-spatial.org/book/04-Spherical.html#validity-on-the-sphere)
+sf_use_s2(FALSE)
 
-geo.box <- c(xmin = -74.5, xmax = -68, ymin = 38, ymax = 42.5)
-gshhg.l1 <- read_sf("D:/shapes/gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp") %>%
-  st_crop(geo.box)
-
+mass <- read_sf("/Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/library/gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp") %>%
+  st_make_valid() %>%
+  st_crop(xmin = -71, xmax = -66, ymin = 40, ymax = 43)
 
 Georges +
-  geom_sf(data = mass, fill = "darkgrey", colour = "black")
+  geom_sf(data = mass, fill = "darkgrey", colour = "black") +
+  coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5), crs = st_crs(4326))
   
 ```
 
@@ -161,14 +152,17 @@ Georges +
 
 ```{r}
 Georges +
-  geom_sf(data = GB_sf, fill = NA, colour = "black",
-          linewidth = 0.4, linetype = "dashed") +
   geom_point(data = station_sf, aes(x = Long, y = Lat), shape = 17)
 ```
 
 # Add polygons
 
 ```{r}
+Georges +
+  geom_sf(data = GB_sf, fill = NA, colour = "black",
+          linewidth = 0.4, linetype = "dashed") +
+
+
 satmap +
   geom_sf(data = NLS_North, fill = "palegreen2",
           col = "transparent", inherit.aes = FALSE) +
