@@ -3,25 +3,203 @@ title: "Mapping Oceanographic Data with R"
 format: html
 editor: visual
 ---
+
 Goal: Plot spatially referenced point and polygon data on a basemap (google earth or bathymetry)
 
 # Libraries we'll use
 
 ```{r}
 library(tidyverse)
-library(ggmap)
-library(maptools)
-library(sp)
+library(sp) # working on eliminating from my code -- one function left
 library(sf)
+library(ggmap)
+library(marmap)
 ```
 
 # Importing data and formatting for spatial use
 
+## Import cruise data
+```{r}
+oct <- read.csv("~/Desktop/Repos/ScallopRSA2021/data/OctCruiseData.csv") %>%
+  rename(Lat = Latitude_degrees_start,
+         Long = Longitude_degrees_start) %>%
+  filter(Filtered == "",
+         Cast == "Bottom") %>%
+  mutate(Tow = ifelse(is.na(Tow_start_time), "N", "Y"))
+```
+
+## Convert coordinates from DM to DD
+```{r}
+chd <- substr(oct$Lat, 3, 3)[1]
+
+# latitude
+Lat_split_oct <- str_split_fixed(oct$Lat, chd, 2) %>%
+                 as.data.frame()
+Lat_split_oct$V2 <- str_remove_all(Lat_split_oct$V2, pattern = "'") %>%
+                    as.numeric()
+Lat_split_oct$V2 <- Lat_split_oct$V2/60
+Lat_split_oct$V1 <- as.numeric(Lat_split_oct$V1)
+
+oct$Lat <- Lat_split_oct$V1 + Lat_split_oct$V2
+rm(Lat_split_oct)
+
+# longitude
+Long_split_oct <- str_split_fixed(oct$Long, chd, 2) %>%
+                  as.data.frame()
+Long_split_oct$V2 <- str_remove_all(Long_split_oct$V2, pattern = "'") %>%
+                     as.numeric()
+Long_split_oct$V2 <- Long_split_oct$V2/60
+Long_split_oct$V1 <- as.numeric(Long_split_oct$V1)
+
+oct$Long <- -(Long_split_oct$V1 + Long_split_oct$V2)
+```
+
+## Convert cruise data to a simple features object
+
+"Simple Features" is a commonly used set of GIS standards for storing and accessing data representing two-dimensional geographic features (e.g. points, lines, polygons).
+
+```{r}
+# create SpatialPoints object from lat/long coordinates
+station_SPDF <- SpatialPointsDataFrame(coords = oct[ , c("Long",
+                                                         "Lat")],
+                                       data = oct[ , c("Long",
+                                                       "Lat",
+                                                       "Station",
+                                                       "Tow")],
+                                       proj4string = CRS("EPSG:4326"))
+
+
+
+station_sf2 <- st_sf(oct,
+                     crs = 4326,
+                     sf_column_name = "Long")
+
+# convert SpatialPoints object to an sf object
+station_sf <- st_as_sf(station_SPDF)
+```
+
 # Build a basemap
+
+## Use a satellite image
+
+### Register Google API key
+```{r, include=FALSE}
+register_google(key = "AIzaSyBvvS_nvTml09h56OWd0Oniktayi0L8WDU")
+```
+
+```{r}
+# extract satellite map from Google Maps
+GB_map <- get_map(c(-68.5247, 40.8155), maptype = "satellite", zoom = 7, source = "google")
+
+satmap <- ggmap(GB_map) +
+  coord_sf(crs = st_crs(4326)) +
+  xlim(c(-70.5, -66)) +
+  ylim(c(40, 42.5)) +
+  theme(axis.title = element_blank())
+
+satmap
+```
+
+## Use imported bathymetry
+```{r}
+# import bathymetric data from NOAA's server
+GB_bathy <- getNOAA.bathy(lon1 = -74,
+                          lon2 = -62,
+                          lat1 = 37,
+                          lat2 = 46,
+                          resolution = 1)
+
+# prepare data for mapping with ggplot
+ggbathy <- GB_bathy %>%
+  fortify() %>%
+  mutate(depth_bins = cut(z,
+                          breaks = c(0, -30, -55, -75, -90, -120, -150, -180,
+                                     -780, -1380, -1980, -2580, -3180, -Inf)))
+
+# create map!
+Georges <- ggplot() +
+  geom_raster(data = ggbathy, aes(x, y, fill = depth_bins),
+              interpolate = TRUE, alpha = 0.75) +
+  coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5), crs = st_crs(4326)) +
+  theme_bw() +
+  theme(axis.title = element_blank(),
+        legend.position = "none")
+
+Georges
+```
+
+## Change the depth scale to shades of blue
+```{r}
+Georges +
+  scale_fill_manual(values = c("#08306B", "#084184", "#08519C", "#1561A9",
+                               "#2171B5", "#3282BE", "#4292C6", "#57A0CE",
+                               "#6BAED6", "#85BCDC", "#9ECAE1", "#B2D3E8",
+                               "#C6DBEF"))
+```
+
+## Use a higher-resolution coastline
+
+GSHHG (Global Self-consistent, Hierarchical, High-resolution Geography) shoreline data can be downloaded from https://www.ngdc.noaa.gov/mgg/shorelines/data/gshhg/latest/.
+
+```{r}
+mass <- st_read("/Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/library/gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp") %>%
+  st_make_valid() #%>%
+  st_crop(xmin = -73.5, xmax = -63.5, ymin = 38, ymax = 46)
+  
+
+geo.box <- c(xmin = -74.5, xmax = -68, ymin = 38, ymax = 42.5)
+gshhg.l1 <- read_sf("D:/shapes/gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp") %>%
+  st_crop(geo.box)
+
+
+Georges +
+  geom_sf(data = mass, fill = "darkgrey", colour = "black")
+  
+```
 
 # Plot points on a spatial grid
 
+```{r}
+Georges +
+  geom_sf(data = GB_sf, fill = NA, colour = "black",
+          linewidth = 0.4, linetype = "dashed") +
+  geom_point(data = station_sf, aes(x = Long, y = Lat), shape = 17)
+```
+
 # Add polygons
 
-# Working with rasters (if time)
+```{r}
+satmap +
+  geom_sf(data = NLS_North, fill = "palegreen2",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL1_South, fill = "firebrick3",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL1_Sliver, fill = "mediumorchid3",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL2_AccessSoutheast, fill = "lightskyblue",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = SF, fill = "darkorange2",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL2_North, fill = "seagreen2",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL1_Access, fill = "chartreuse3",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = NF, fill = "peachpuff2",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL2_Ext, fill = "slateblue1",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = GSC, fill = "steelblue1",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = NLS_SouthDeep, fill = "blueviolet",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = NLS_West, fill = "lightpink2",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = NLS_SouthShallow, fill = "tan3",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL2_AccessSouthwest, fill = "yellow2",
+          col = "transparent", inherit.aes = FALSE) +
+  geom_sf(data = SF_East, fill = "darkturquoise",
+          col = "transparent", inherit.aes = FALSE)
+```
 
+# Working with rasters (if time)
