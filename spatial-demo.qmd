@@ -81,6 +81,7 @@ register_google(key = "AIzaSyBvvS_nvTml09h56OWd0Oniktayi0L8WDU")
 # extract satellite map from Google Maps
 GB_map <- get_map(c(-68.5247, 40.8155), maptype = "satellite", zoom = 7, source = "google")
 
+# create basemap using ggmap
 satmap <- ggmap(GB_map) +
   coord_sf(crs = st_crs(4326)) +
   xlim(c(-70.5, -66)) +
@@ -106,7 +107,7 @@ ggbathy <- GB_bathy %>%
                           breaks = c(0, -30, -55, -75, -90, -120, -150, -180,
                                      -780, -1380, -1980, -2580, -3180, -Inf)))
 
-# create map!
+# create basemap
 Georges <- ggplot() +
   geom_raster(data = ggbathy, aes(x, y, fill = depth_bins),
               interpolate = TRUE, alpha = 0.75) +
@@ -133,19 +134,21 @@ Georges
 
 GSHHG (Global Self-consistent, Hierarchical, High-resolution Geography) shoreline data can be downloaded from https://www.ngdc.noaa.gov/mgg/shorelines/data/gshhg/latest/.
 
+Additional note: Spherical geometry is turned off because many polygons cannot be valid on S2 and R2 simultaneously, as outlined here: https://r-spatial.org/book/04-Spherical.html#validity-on-the-sphere
+
 ```{r}
 # turn off spherical geometry to avoid "duplicate vertex" errors
-## (many polygons cannot be valid on S2 and R2 simultaneously, as outlined here: https://r-spatial.org/book/04-Spherical.html#validity-on-the-sphere)
 sf_use_s2(FALSE)
 
 mass <- read_sf("/Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/library/gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp") %>%
   st_make_valid() %>%
   st_crop(xmin = -71, xmax = -66, ymin = 40, ymax = 43)
 
-Georges +
+Georges <- Georges +
   geom_sf(data = mass, fill = "darkgrey", colour = "black") +
   coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5), crs = st_crs(4326))
-  
+
+Georges
 ```
 
 # Plot points on a spatial grid
@@ -171,7 +174,7 @@ Georges +
 
 ## Back to the satellite map for fun
 ```{r}
-# subset shapefile to SAM zones
+# subset individual SAM zones
 NLS_North <- subset(GB, NewSAMS == "NLS-North")
 CL1_South <- subset(GB, NewSAMS == "CL1-South")
 CL1_Sliver <- subset(GB, NewSAMS == "CL1-Sliver")
@@ -189,7 +192,7 @@ CL2_AccessSouthwest <- subset(GB, NewSAMS == "CL2-Access-Southwest")
 SF_East <- subset(GB, NewSAMS == "SF-East")
 
 # add to the map!
-satmap +
+satmap <- satmap +
   geom_sf(data = NLS_North, fill = "palegreen2",
           col = "transparent", inherit.aes = FALSE) +
   geom_sf(data = CL1_South, fill = "firebrick3",
@@ -221,6 +224,13 @@ satmap +
   geom_sf(data = SF_East, fill = "darkturquoise",
           col = "transparent", inherit.aes = FALSE) +
   coord_sf(crs = st_crs(4326))
+
+satmap
+```
+## Add points on top
+```{r}
+satmap +
+  geom_point(data = station_sf, aes(x = Long, y = Lat), shape = 17)
 ```
 
 # Working with rasters (if time)
