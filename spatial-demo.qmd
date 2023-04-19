@@ -18,6 +18,7 @@ library(marmap)
 # Importing data and formatting for spatial use
 
 ## Import cruise data
+
 ```{r}
 oct <- read.csv("~/Desktop/Repos/ScallopRSA2021/data/OctCruiseData.csv") %>%
   rename(Lat = Latitude_degrees_start,
@@ -28,6 +29,7 @@ oct <- read.csv("~/Desktop/Repos/ScallopRSA2021/data/OctCruiseData.csv") %>%
 ```
 
 ## Convert coordinates from DM to DD
+
 ```{r}
 chd <- substr(oct$Lat, 3, 3)[1]
 
@@ -73,13 +75,17 @@ station_sf <- st_sf(oct, crs = 4326)
 ## Use a satellite image
 
 ### Register Google API key
+
 ```{r, include=FALSE}
 register_google(key = "AIzaSyBvvS_nvTml09h56OWd0Oniktayi0L8WDU")
 ```
 
 ```{r}
 # extract satellite map from Google Maps
-GB_map <- get_map(c(-68.5247, 40.8155), maptype = "satellite", zoom = 7, source = "google")
+GB_map <- get_map(c(-68.5247, 40.8155),
+                  maptype = "satellite",
+                  zoom = 7,
+                  source = "google")
 
 # create basemap using ggmap
 satmap <- ggmap(GB_map) +
@@ -92,6 +98,7 @@ satmap
 ```
 
 ## Use imported bathymetry
+
 ```{r}
 # import bathymetric data from NOAA's server
 GB_bathy <- getNOAA.bathy(lon1 = -74,
@@ -109,9 +116,13 @@ ggbathy <- GB_bathy %>%
 
 # create basemap
 Georges <- ggplot() +
-  geom_raster(data = ggbathy, aes(x, y, fill = depth_bins),
-              interpolate = TRUE, alpha = 0.75) +
-  coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5), crs = st_crs(4326)) +
+  geom_raster(data = ggbathy,
+              aes(x, y, fill = depth_bins),
+              interpolate = TRUE,
+              alpha = 0.75) +
+  coord_sf(xlim = c(-70.5, -66),
+           ylim = c(40, 42.5),
+           crs = st_crs(4326)) +
   theme_bw() +
   theme(axis.title = element_blank(),
         legend.position = "none")
@@ -120,6 +131,7 @@ Georges
 ```
 
 ## Change the depth scale to shades of blue
+
 ```{r}
 Georges <- Georges +
   scale_fill_manual(values = c("#08306B", "#084184", "#08519C", "#1561A9",
@@ -161,6 +173,7 @@ Georges +
 # Add polygons
 
 ## Import shapefile of scallop fishing management zones
+
 ```{r}
 GB <- st_read("~/Desktop/Repos/ScallopRSA2021/data/2020SAMZones/GB_Estimation_Areas_2019_UTM19_PDT_SFModified.shp")
 ```
@@ -172,7 +185,8 @@ Georges +
   coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5), crs = st_crs(4326))
 ```
 
-## Back to the satellite map for fun
+## Back to the satellite map for fun!
+
 ```{r}
 # subset individual SAM zones
 NLS_North <- subset(GB, NewSAMS == "NLS-North")
@@ -211,7 +225,7 @@ satmap <- satmap +
           col = "transparent", inherit.aes = FALSE) +
   geom_sf(data = CL2_Ext, fill = "slateblue1",
           col = "transparent", inherit.aes = FALSE) +
-  geom_sf(data = GSC, fill = "steelblue1",
+  geom_sf(data = GSC, fill = "steelblue2",
           col = "transparent", inherit.aes = FALSE) +
   geom_sf(data = NLS_SouthDeep, fill = "blueviolet",
           col = "transparent", inherit.aes = FALSE) +
@@ -227,7 +241,9 @@ satmap <- satmap +
 
 satmap
 ```
+
 ## Add points on top
+
 ```{r}
 satmap +
   geom_point(data = station_sf, aes(x = Long, y = Lat, col = Tow), shape = 17) +
