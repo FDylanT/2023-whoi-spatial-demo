@@ -230,7 +230,8 @@ satmap
 ## Add points on top
 ```{r}
 satmap +
-  geom_point(data = station_sf, aes(x = Long, y = Lat), shape = 17)
+  geom_point(data = station_sf, aes(x = Long, y = Lat, col = Tow), shape = 17) +
+  scale_colour_manual(values = c("black", "white"), name = "Scallop\ntow?")
 ```
 
 # Working with rasters (if time)
