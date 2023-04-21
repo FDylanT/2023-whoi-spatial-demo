@@ -275,4 +275,4 @@ satmap +
   scale_colour_manual(values = c("black", "white"), name = "Scallop\ntow?")
 ```
 
-Thanks so much for viewing! Please feel free to reach out to me at `dylan.titmuss@whoi.edu` with any questions or comments.
+Thanks so much for viewing! Please feel free to reach out to me at `dylan.titmuss@whoi.edu` with any questions or comments. 
