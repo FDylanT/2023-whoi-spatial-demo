@@ -142,7 +142,7 @@ Georges <- Georges +
 Georges
 ```
 
-## Use a higher-resolution coastline
+## Add a higher-resolution coastline
 
 GSHHG (Global Self-consistent, Hierarchical, High-resolution Geography) shoreline data can be downloaded from https://www.ngdc.noaa.gov/mgg/shorelines/data/gshhg/latest/.
 
