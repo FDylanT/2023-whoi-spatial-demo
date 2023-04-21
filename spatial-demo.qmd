@@ -31,10 +31,12 @@ register_google(key = "[PERSONAL API KEY HERE]")
 
 When transforming the earth from its 3-D spherical shape to a 2-D shape, various distinct projections may be used depending on the scale and purposes of a given map. A Coordinate Reference System (CRS) defines how a specific two-dimensional projection relates to real places on the earth, and therefore is an important specification in geospatial mapping. Here, we use the most popular geodetic datum, WGS84 (World Geodetic System 1984), represented by the EPSG code 4326.
 
+Within `get_map()`, feel free to experiment with the other `maptype` options for maps sourced from Google or Stamen, examples here: https://r-graph-gallery.com/324-map-background-with-the-ggmap-library.html.
+
 ```{r}
 # extract satellite map from Google Maps
 GB_map <- get_map(c(-68.5247, 40.8155),
-                  maptype = "satellite",   # feel free to explore the other maptype options!
+                  maptype = "satellite",
                   zoom = 7,
                   source = "google")
 
