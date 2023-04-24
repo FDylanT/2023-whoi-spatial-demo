@@ -108,7 +108,11 @@ GSHHG (Global Self-consistent, Hierarchical, High-resolution Geography) shorelin
 
 Spherical geometry is turned off because many polygons cannot be valid on S2 and R2 simultaneously, as outlined in <https://r-spatial.org/book/04-Spherical.html#validity-on-the-sphere>. (This is an excellent book for general referencing!)
 
+<<<<<<< Updated upstream
 The `st_make_valid()` function serves to resolve any areas of geometry that are not topologically valid and thus would raise a GEOS error. Another useful function not needed here, `st_remove_holes()`, similarly resolves issues such as false slivers of space between contiguous polygons.
+=======
+The `st_make_valid()` function serves to resolve any areas of geometry that are not topologically valid and thus would raise a GEOS error, such as false slivers of space between contiguous polygons.
+>>>>>>> Stashed changes
 
 ```{r}
 # turn off spherical geometry to avoid "duplicate vertex" errors
