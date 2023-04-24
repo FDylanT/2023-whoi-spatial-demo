@@ -6,7 +6,7 @@ editor: visual
 
 **Goal:** Plot spatially referenced point and polygon data on a basemap created from a Google Earth image or from bathymetric data.
 
-# 0) Libraries we'll use
+## Libraries we'll use
 
 ```{r}
 library(tidyverse)
@@ -15,23 +15,25 @@ library(ggmap)
 library(marmap)
 ```
 
-# 1) Build a basemap
+## 1) Build a basemap
 
-## a) ...using a satellite image
+### a) ...using a satellite image
 
-#### Register Google API key
+##### Register Google API key
 
-To obtain an API key and enable services, go to <https://mapsplatform.google.com/>. (Also note that your API key should be kept secure, as sharing it publicly can open your account up to being compromised.)
+To obtain an API key and enable services, go to <https://mapsplatform.google.com>. (Also note that your API key should be kept secure, as sharing it publicly can open your account up to being compromised.)
 
-```{r}
-register_google(key = "[PERSONAL API KEY HERE]")
+My code chunk is hidden here, but the function to register your API key in an R session takes the form `register_google(key = "PERSONAL API KEY")`.
+
+```{r, include=FALSE}
+register_google(key = "PERSONAL API KEY")
 ```
 
-#### Create basemap
+##### Create basemap
 
 When transforming the earth from its 3-D spherical shape to a 2-D shape, various distinct projections may be used depending on the scale and purposes of a given map. A Coordinate Reference System (CRS) defines how a specific two-dimensional projection relates to real places on the earth, and therefore is an important specification in geospatial mapping. Here, we use the most popular geodetic datum, WGS84 (World Geodetic System 1984), represented by the EPSG code 4326.
 
-Within `get_map()`, feel free to experiment with the other `maptype` options for maps sourced from Google or Stamen, examples here: https://r-graph-gallery.com/324-map-background-with-the-ggmap-library.html.
+Within `get_map()`, feel free to experiment with the other `maptype` options for maps sourced from Google or Stamen, examples here: <https://r-graph-gallery.com/324-map-background-with-the-ggmap-library.html>.
 
 ```{r}
 # extract satellite map from Google Maps
@@ -50,11 +52,11 @@ satmap <- ggmap(GB_map) +
 satmap
 ```
 
-## b) ...using bathymetric data
+### b) ...using bathymetric data
 
-#### Create basemap
+##### Create basemap
 
-For more information on the `getNOAA.bathy()` function and a citation for the ETOPO 2022 data, see https://www.rdocumentation.org/packages/marmap/versions/1.0.10/topics/getNOAA.bathy.
+For more information on the `getNOAA.bathy()` function and a citation for the ETOPO 2022 data, see <https://www.rdocumentation.org/packages/marmap/versions/1.0.10/topics/getNOAA.bathy>.
 
 Note that the CRS is set in `coord_sf()` solely for the sake of formatting the limits; the `ggbathy` raster data is already set to WGS84/EPSG:4326.
 
@@ -88,7 +90,7 @@ Georges <- ggplot() +
 Georges
 ```
 
-#### Change default colour scale to shades of blue
+##### Change default colour scale to shades of blue
 
 ```{r}
 Georges <- Georges +
@@ -100,11 +102,11 @@ Georges <- Georges +
 Georges
 ```
 
-#### Add higher-resolution coastline
+##### Add higher-resolution coastline
 
-GSHHG (Global Self-consistent, Hierarchical, High-resolution Geography) shoreline data can be downloaded from https://www.ngdc.noaa.gov/mgg/shorelines/data/gshhg/latest/.
+GSHHG (Global Self-consistent, Hierarchical, High-resolution Geography) shoreline data can be downloaded from <https://www.ngdc.noaa.gov/mgg/shorelines/data/gshhg/latest>.
 
-Spherical geometry is turned off because many polygons cannot be valid on S2 and R2 simultaneously, as outlined in https://r-spatial.org/book/04-Spherical.html#validity-on-the-sphere. (This is an excellent book for general referencing!)
+Spherical geometry is turned off because many polygons cannot be valid on S2 and R2 simultaneously, as outlined in <https://r-spatial.org/book/04-Spherical.html#validity-on-the-sphere>. (This is an excellent book for general referencing!)
 
 The `st_make_valid()` function serves to resolve any areas of geometry that are not topologically valid and thus would raise a GEOS error, such as false slivers of space between contiguous polygons.
 
@@ -125,9 +127,9 @@ Georges <- Georges +
 Georges
 ```
 
-# 2) Import point data and format for spatial use
+## 2) Import point data and format for spatial use
 
-#### Import cruise data
+##### Import cruise data
 
 ```{r}
 oct <- read.csv("~/Desktop/Repos/ScallopRSA2021/data/OctCruiseData.csv") %>%
@@ -138,7 +140,7 @@ oct <- read.csv("~/Desktop/Repos/ScallopRSA2021/data/OctCruiseData.csv") %>%
   mutate(Tow = ifelse(is.na(Tow_start_time), "N", "Y"))
 ```
 
-#### Convert coordinates from DM to DD
+##### Convert coordinates from DM to DD
 
 ```{r}
 chd <- substr(oct$Lat, 3, 3)[1]
@@ -165,7 +167,7 @@ Long_split_oct$V1 <- as.numeric(Long_split_oct$V1)
 oct$Long <- -(Long_split_oct$V1 + Long_split_oct$V2)
 ```
 
-#### Create a simple features object from cruise data
+##### Create a simple features object from cruise data
 
 "Simple Features" is a commonly used set of GIS standards for storing and accessing data representing predominantly two-dimensional geographic features (e.g. points, lines, polygons).
 
@@ -180,16 +182,16 @@ for(i in 1:nrow(oct)) {
 station_sf <- st_sf(oct, crs = 4326)
 ```
 
-#### Plot points on a spatial grid
+##### Plot points on a spatial grid
 
 ```{r}
 Georges +
   geom_point(data = station_sf, aes(x = Long, y = Lat), shape = 17)
 ```
 
-# 3) Import polygons and plot on map
+## 3) Import polygons and plot on map
 
-#### Import shapefile of scallop fishing management zones
+##### Import shapefile of scallop fishing management zones
 
 ```{r}
 GB <- st_read("~/Desktop/Repos/ScallopRSA2021/data/2020SAMZones/GB_Estimation_Areas_2019_UTM19_PDT_SFModified.shp")
@@ -197,7 +199,7 @@ GB <- st_read("~/Desktop/Repos/ScallopRSA2021/data/2020SAMZones/GB_Estimation_Ar
 
 Note that the innate CRS of this polygon collection is NAD83 / UTM zone 19N (which is EPSG:26919), *not* WGS 84; therefore it is essential that we set the CRS to EPSG:4326 in `coord_sf()` in order to align with our existing basemap.
 
-#### Plot polygons on a spatial grid
+##### Plot polygons on a spatial grid
 
 ```{r}
 Georges +
@@ -206,9 +208,9 @@ Georges +
   coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5), crs = st_crs(4326))
 ```
 
-# 4) Back to the satellite map for fun!
+## 4) Back to the satellite map for fun!
 
-#### Subset the fifteen SAM zones
+##### Subset the fifteen SAM zones
 
 ```{r}
 NLS_North <- subset(GB, NewSAMS == "NLS-North")
@@ -228,7 +230,7 @@ CL2_AccessSouthwest <- subset(GB, NewSAMS == "CL2-Access-Southwest")
 SF_East <- subset(GB, NewSAMS == "SF-East")
 ```
 
-#### Add polygons to map!
+##### Add polygons to map!
 
 ```{r}
 satmap <- satmap +
@@ -267,7 +269,7 @@ satmap <- satmap +
 satmap
 ```
 
-#### Overlay points on top
+##### Overlay points on top
 
 Maps with a satellite background may be ideal for public dissemination -- for example, a version of this map was used to provide scallop fishermen with a visual of our planned sampling track.
 
