@@ -83,6 +83,8 @@ Georges <- ggplot() +
   coord_sf(xlim = c(-70.5, -66),
            ylim = c(40, 42.5),
            crs = st_crs(4326)) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
   theme_bw() +
   theme(axis.title = element_blank(),
         legend.position = "none")
@@ -108,11 +110,7 @@ GSHHG (Global Self-consistent, Hierarchical, High-resolution Geography) shorelin
 
 Spherical geometry is turned off because many polygons cannot be valid on S2 and R2 simultaneously, as outlined in <https://r-spatial.org/book/04-Spherical.html#validity-on-the-sphere>. (This is an excellent book for general referencing!)
 
-<<<<<<< Updated upstream
 The `st_make_valid()` function serves to resolve any areas of geometry that are not topologically valid and thus would raise a GEOS error. Another useful function not needed here, `st_remove_holes()`, similarly resolves issues such as false slivers of space between contiguous polygons.
-=======
-The `st_make_valid()` function serves to resolve any areas of geometry that are not topologically valid and thus would raise a GEOS error, such as false slivers of space between contiguous polygons.
->>>>>>> Stashed changes
 
 ```{r}
 # turn off spherical geometry to avoid "duplicate vertex" errors
@@ -126,6 +124,11 @@ mass <- read_sf("/Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/li
 # add to map
 Georges <- Georges +
   geom_sf(data = mass, fill = "darkgrey", colour = "black") +
+  scale_fill_manual(values = c("#08306B", "#084184", "#08519C", "#1561A9",
+                               "#2171B5", "#3282BE", "#4292C6", "#57A0CE",
+                               "#6BAED6", "#85BCDC", "#9ECAE1", "#B2D3E8",
+                               "#C6DBEF"),
+                    na.value = "#C6DBEF") +   # cleans up pixelated coastline edges from GB bathy
   coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5))
 
 Georges
@@ -282,5 +285,76 @@ satmap +
   geom_point(data = station_sf, aes(x = Long, y = Lat, col = Tow), shape = 17) +
   scale_colour_manual(values = c("black", "white"), name = "Scallop\ntow?")
 ```
+
+## 5) Other fine-tuning options
+
+As with other ggplot applications, this method of spatial visualisation provides widely flexible options for adding or modifying elements of a plot, such as in the example(s) below. (Also note that the order in which various elements are added determines the order in which they are layered onto the map.)
+
+##### Increase color transparency
+
+```{r}
+# set all polygon values to alpha = 0.75
+Georges <- Georges +
+  geom_sf(data = NLS_North, fill = "palegreen2",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL1_South, fill = "firebrick3",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL1_Sliver, fill = "mediumorchid3",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL2_AccessSoutheast, fill = "lightskyblue",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = SF, fill = "darkorange2",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL2_North, fill = "seagreen2",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL1_Access, fill = "chartreuse3",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = NF, fill = "peachpuff2",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL2_Ext, fill = "slateblue1",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = GSC, fill = "steelblue2",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = NLS_SouthDeep, fill = "blueviolet",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = NLS_West, fill = "lightpink2",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = NLS_SouthShallow, fill = "tan3",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = CL2_AccessSouthwest, fill = "yellow2",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_sf(data = SF_East, fill = "darkturquoise",
+          alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
+  geom_point(data = station_sf, aes(x = Long, y = Lat, col = Tow), shape = 18, size = 2) +
+  scale_colour_manual(values = c("black", "white")) +
+  coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5), crs = st_crs(4326))
+
+Georges
+```
+##### Add dashed outline
+
+```{r}
+# combine SAM polygons into one polygon
+GB_sf <- st_union(st_geometry(NLS_North), st_geometry(CL1_South)) %>%
+  st_union(st_geometry(CL1_Sliver)) %>%
+  st_union(st_geometry(CL2_AccessSoutheast)) %>%
+  st_union(st_geometry(SF)) %>%
+  st_union(st_geometry(CL2_North)) %>%
+  st_union(st_geometry(CL1_Access)) %>%
+  st_union(st_geometry(NF)) %>%
+  st_union(st_geometry(CL2_Ext)) %>%
+  st_union(st_geometry(GSC)) %>%
+  st_union(st_geometry(NLS_SouthDeep)) %>%
+  st_union(st_geometry(NLS_West)) %>%
+  st_union(st_geometry(NLS_SouthShallow)) %>%
+  st_union(st_geometry(CL2_AccessSouthwest)) %>%
+  st_union(st_geometry(SF_East)) %>%
+  st_remove_holes() # remove slivers between polygon borders
+
+Georges +
+  geom_sf(data = GB_sf, fill = NA, colour = "black", linewidth = 0.4, linetype = "dashed") +
+  coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5), crs = st_crs(4326))
+```
+
 
 Thanks so much for viewing! Please feel free to reach out to me at `dylan.titmuss@whoi.edu` with any questions or comments.
