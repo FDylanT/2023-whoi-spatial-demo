@@ -13,6 +13,7 @@ library(tidyverse)
 library(sf)
 library(ggmap)
 library(marmap)
+library(nngeo)
 ```
 
 ## 1) Build a basemap
@@ -331,6 +332,7 @@ Georges <- Georges +
 
 Georges
 ```
+
 ##### Add dashed outline
 
 ```{r}
@@ -355,6 +357,5 @@ Georges +
   geom_sf(data = GB_sf, fill = NA, colour = "black", linewidth = 0.4, linetype = "dashed") +
   coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5), crs = st_crs(4326))
 ```
-
 
 Thanks so much for viewing! Please feel free to reach out to me at `dylan.titmuss@whoi.edu` with any questions or comments.
