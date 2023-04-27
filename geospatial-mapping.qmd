@@ -284,7 +284,12 @@ Maps with a satellite background may be ideal for public dissemination -- for ex
 ```{r}
 satmap +
   geom_point(data = station_sf, aes(x = Long, y = Lat, col = Tow), shape = 17) +
-  scale_colour_manual(values = c("black", "white"), name = "Scallop\ntow?")
+  scale_colour_manual(values = c("black", "white"), name = "Scallop\ntow?") +
+  guides(colour = guide_legend(title = "Scallop\nTow?",
+                               title.hjust = 0.5,
+                               override.aes = list(shape = c(24, 24),
+                                                   col = c("black", "black"),
+                                                   fill = c("black", "white"))))
 ```
 
 ## 5) Other fine-tuning options
