@@ -2,13 +2,15 @@
 title: "Mapping Oceanographic Data with R"
 format: html
 editor: visual
+editor_options: 
+  chunk_output_type: console
 ---
 
-**Goal:** Plot spatially referenced point and polygon data on a basemap created from a Google Earth image or from bathymetric data.
+**Goal:** Plot spatial point and polygon data on a map created from a Google Earth image or from bathymetric data. As with other ggplot applications, this method of spatial visualisation provides widely flexible options for adding or modifying elements of a plot, such as in the example(s) below.
 
 ## Libraries we'll use
 
-```{r}
+```{r, message = FALSE}
 library(tidyverse)
 library(sf)
 library(ggmap)
@@ -20,29 +22,34 @@ library(nngeo)
 
 ### a) ...using a satellite image
 
-##### Register Google API key
+#### Register Google API key
 
 To obtain an API key and enable services, go to <https://mapsplatform.google.com>. (Also note that your API key should be kept secure, as sharing it publicly can open your account up to being compromised.)
 
-My code chunk is hidden here, but the function to register your API key in an R session takes the form `register_google(key = "PERSONAL API KEY")`.
+My next code chunk is hidden here, but the function to register your API key in an R session takes the form `register_google(key = "PERSONAL API KEY")`.
 
-```{r, include=FALSE}
-register_google(key = "PERSONAL API KEY")
+```{r, include = FALSE}
+register_google(key = "AIzaSyBn1OxFq4DMK79J4qHmQoBvFlbHbeImABw")
 ```
 
-##### Create basemap
+#### Extract satellite map from Google Maps
 
-When transforming the earth from its 3-D spherical shape to a 2-D shape, various distinct projections may be used depending on the scale and purposes of a given map. A Coordinate Reference System (CRS) defines how a specific two-dimensional projection relates to real places on the earth, and therefore is an important specification in geospatial mapping. Here, we use the most popular geodetic datum, WGS84 (World Geodetic System 1984), represented by the EPSG code 4326.
+Right click on a Google Maps page to get coordinates. Also note that *longitude* comes first inside the coordinate parentheses.
 
 Within `get_map()`, feel free to experiment with the other `maptype` options for maps sourced from Google or Stamen, examples here: <https://r-graph-gallery.com/324-map-background-with-the-ggmap-library.html>.
 
-```{r}
-# extract satellite map from Google Maps
+```{r, message = FALSE}
 GB_map <- get_map(c(-68.5247, 40.8155),
                   maptype = "satellite",
                   zoom = 7,
                   source = "google")
+```
 
+#### Create basemap
+
+When transforming the earth from its 3-D spherical shape to a 2-D shape, various distinct projections may be used depending on the scale and purposes of a given map. A Coordinate Reference System (CRS) defines how a specific two-dimensional projection relates to real places on the earth, and therefore is an important specification in geospatial mapping. Here, we use the most popular geodetic datum, WGS84 (World Geodetic System 1984), represented by the EPSG code 4326.
+
+```{r}
 # create basemap using ggmap
 satmap <- ggmap(GB_map) +
   coord_sf(crs = st_crs(4326)) +
@@ -55,20 +62,23 @@ satmap
 
 ### b) ...using bathymetric data
 
-##### Create basemap
+#### Import bathymetric data from NOAA's ETOPO 2022 database
 
 For more information on the `getNOAA.bathy()` function and a citation for the ETOPO 2022 data, see <https://www.rdocumentation.org/packages/marmap/versions/1.0.10/topics/getNOAA.bathy>.
 
-Note that the CRS is set in `coord_sf()` solely for the sake of formatting the limits; the `ggbathy` raster data is already set to WGS84/EPSG:4326.
-
 ```{r}
-# import bathymetric data from NOAA's ETOPO 2022 database
 GB_bathy <- getNOAA.bathy(lon1 = -74,
                           lon2 = -62,
                           lat1 = 37,
                           lat2 = 46,
                           resolution = 1)
+```
 
+#### Create map
+
+Note that the CRS is set in `coord_sf()` solely for the sake of formatting the limits; the `ggbathy` raster data is already set to WGS84/EPSG:4326.
+
+```{r}
 # prepare data for mapping with ggplot
 ggbathy <- GB_bathy %>%
   fortify() %>%
@@ -84,16 +94,13 @@ Georges <- ggplot() +
   coord_sf(xlim = c(-70.5, -66),
            ylim = c(40, 42.5),
            crs = st_crs(4326)) +
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0)) +
-  theme_bw() +
   theme(axis.title = element_blank(),
         legend.position = "none")
 
 Georges
 ```
 
-##### Change default colour scale to shades of blue
+#### Change default colour scale to shades of blue
 
 ```{r}
 Georges <- Georges +
@@ -105,19 +112,37 @@ Georges <- Georges +
 Georges
 ```
 
-##### Add higher-resolution coastline
+#### Add higher-resolution coastline
 
 GSHHG (Global Self-consistent, Hierarchical, High-resolution Geography) shoreline data can be downloaded from <https://www.ngdc.noaa.gov/mgg/shorelines/data/gshhg/latest>.
 
 Spherical geometry is turned off because many polygons cannot be valid on S2 and R2 simultaneously, as outlined in <https://r-spatial.org/book/04-Spherical.html#validity-on-the-sphere>. (This is an excellent book for general referencing!)
 
-The `st_make_valid()` function serves to resolve any areas of geometry that are not topologically valid and thus would raise a GEOS error. Another useful function not needed here, `st_remove_holes()`, similarly resolves issues such as false slivers of space between contiguous polygons.
+**About shapefiles**
+
+Unlike most text files, some spatial data formats include a set of several files. A shapefile is created by three or more files, all of which must have the *same name* and be stored in the *same file directory* in order for you to be able to work with them.
+
+There are three key files associated with any and all shapefiles:
+
+-   .shp: the file that contains the geometry for all features.
+-   .shx: the file that indexes the geometry.
+-   .dbf: the file that stores feature attributes in a tabular format.
+
+Sometimes, a shapefile will have other associated files including:
+
+-   .prj: the file that contains information on projection format including the coordinate system and projection information.
+
+**In short: to get a "shapefile" to load, you must have matching .shp, .shx, and .dbf files together in the same folder, each with the same file name. In these examples, we also have matching .prj files, which save us from having to assign a CRS to the shapefile ourselves.**
+
+The `st_make_valid()` function serves to resolve any areas of geometry that are not topologically valid and thus would raise a GEOS error. Another useful function not needed here, `st_remove_holes()` (from the package `nngeo`), similarly resolves issues such as false slivers of space between contiguous polygons.
+
+(Also note that the order in which various elements are added determines the order in which they are layered onto the map: i.e., coastline on top of bathymetry.)
 
 ```{r}
 # turn off spherical geometry to avoid "duplicate vertex" errors
 sf_use_s2(FALSE)
 
-# read shapefile from wherever the file is located
+# read shapefile from wherever the file set is located
 mass <- read_sf("/Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/library/gshhg-shp-2.3.7/GSHHS_shp/f/GSHHS_f_L1.shp") %>%
   st_make_valid() %>%
   st_crop(xmin = -71, xmax = -66, ymin = 40, ymax = 43)
@@ -137,7 +162,7 @@ Georges
 
 ## 2) Import point data and format for spatial use
 
-##### Import cruise data
+#### Import cruise data
 
 ```{r}
 oct <- read.csv("~/Desktop/Repos/ScallopRSA2021/data/OctCruiseData.csv") %>%
@@ -148,7 +173,7 @@ oct <- read.csv("~/Desktop/Repos/ScallopRSA2021/data/OctCruiseData.csv") %>%
   mutate(Tow = ifelse(is.na(Tow_start_time), "N", "Y"))
 ```
 
-##### Convert coordinates from DM to DD
+#### Convert coordinates from DM to DD
 
 ```{r}
 chd <- substr(oct$Lat, 3, 3)[1]
@@ -175,39 +200,40 @@ Long_split_oct$V1 <- as.numeric(Long_split_oct$V1)
 oct$Long <- -(Long_split_oct$V1 + Long_split_oct$V2)
 ```
 
-##### Create a simple features object from cruise data
+#### Data-dependent: Create a simple features object from cruise data
 
 "Simple Features" is a commonly used set of GIS standards for storing and accessing data representing predominantly two-dimensional geographic features (e.g. points, lines, polygons).
 
 ```{r}
-# create geometry column in data frame from lat/long data
-for(i in 1:nrow(oct)) {
-  oct$geometry[i] <- st_point(x = c(oct$Long[i], oct$Lat[i])) %>%
-    st_sfc(crs = 4326)
-}
-
-# create an sf object from data frame
-station_sf <- st_sf(oct, crs = 4326)
+station_sf <- st_as_sf(oct,
+                       coords = c("Long", "Lat"),
+                       crs = 4326)
 ```
 
-##### Plot points on a spatial grid
+#### Plot points
 
 ```{r}
+# if you are using point data
 Georges +
-  geom_point(data = station_sf, aes(x = Long, y = Lat), shape = 17)
+  geom_point(data = oct, aes(x = Long, y = Lat), shape = 17)
+
+# if you created a simple features object
+Georges +
+  geom_sf(data = station_sf, inherit.aes = FALSE, shape = 17) +
+  coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5)) # (copied from above)
 ```
 
 ## 3) Import polygons and plot on map
 
-##### Import shapefile of scallop fishing management zones
+#### Import shapefile of scallop fishing management zones
 
 ```{r}
 GB <- st_read("~/Desktop/Repos/ScallopRSA2021/data/2020SAMZones/GB_Estimation_Areas_2019_UTM19_PDT_SFModified.shp")
 ```
 
-Note that the innate CRS of this polygon collection is NAD83 / UTM zone 19N (which is EPSG:26919), *not* WGS 84; therefore it is essential that we set the CRS to EPSG:4326 in `coord_sf()` in order to align with our existing basemap.
+Note that the innate CRS of this polygon collection is NAD83 / UTM zone 19N (which is EPSG:26919), *not* WGS 84; therefore it is important that we set the CRS to EPSG:4326 in `coord_sf()` in order to align with our existing basemap.
 
-##### Plot polygons on a spatial grid
+#### Plot polygons
 
 ```{r}
 Georges +
@@ -218,7 +244,7 @@ Georges +
 
 ## 4) Back to the satellite map for fun!
 
-##### Subset the fifteen SAM zones
+#### Subset the fifteen SAM zones
 
 ```{r}
 NLS_North <- subset(GB, NewSAMS == "NLS-North")
@@ -238,7 +264,9 @@ CL2_AccessSouthwest <- subset(GB, NewSAMS == "CL2-Access-Southwest")
 SF_East <- subset(GB, NewSAMS == "SF-East")
 ```
 
-##### Add polygons to map!
+#### Add polygons to map!
+
+Note that to add an sf object to a ggmap image, the `geom_sf()` line needs to specify `data =` for the argument providing the sf object, in order to override ggplot's assumption that the data argument carries down from the `ggmap()` line. The `geom_sf()` line also needs to include the argument `inherit.aes = FALSE` to avoid a conflict between the ggmap's *x* and *y* aesthetics and the sf object's geometry.
 
 ```{r}
 satmap <- satmap +
@@ -277,13 +305,13 @@ satmap <- satmap +
 satmap
 ```
 
-##### Overlay points on top
+#### Overlay points on top; color points by a variable
 
 Maps with a satellite background may be ideal for public dissemination -- for example, a version of this map was used to provide scallop fishermen with a visual of our planned sampling track.
 
 ```{r}
 satmap +
-  geom_point(data = station_sf, aes(x = Long, y = Lat, col = Tow), shape = 17) +
+  geom_point(data = oct, aes(x = Long, y = Lat, col = Tow), shape = 17) +
   scale_colour_manual(values = c("black", "white"), name = "Scallop\ntow?") +
   guides(colour = guide_legend(title = "Scallop\nTow?",
                                title.hjust = 0.5,
@@ -292,11 +320,7 @@ satmap +
                                                    fill = c("black", "white"))))
 ```
 
-## 5) Other fine-tuning options
-
-As with other ggplot applications, this method of spatial visualisation provides widely flexible options for adding or modifying elements of a plot, such as in the example(s) below. (Also note that the order in which various elements are added determines the order in which they are layered onto the map.)
-
-##### Increase color transparency
+#### Do the same thing on the bathymetric map; increase color transparency
 
 ```{r}
 # set all polygon values to alpha = 0.75
@@ -331,14 +355,14 @@ Georges <- Georges +
           alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
   geom_sf(data = SF_East, fill = "darkturquoise",
           alpha = 0.75, col ="transparent", inherit.aes = FALSE) +
-  geom_point(data = station_sf, aes(x = Long, y = Lat, col = Tow), shape = 18, size = 2) +
+  geom_point(data = oct, aes(x = Long, y = Lat, col = Tow), shape = 18, size = 2.5) +
   scale_colour_manual(values = c("black", "white")) +
   coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5), crs = st_crs(4326))
 
 Georges
 ```
 
-##### Add dashed outline
+#### Add dashed outline; edit y-axis
 
 ```{r}
 # combine SAM polygons into one polygon
@@ -360,7 +384,8 @@ GB_sf <- st_union(st_geometry(NLS_North), st_geometry(CL1_South)) %>%
 
 Georges +
   geom_sf(data = GB_sf, fill = NA, colour = "black", linewidth = 0.4, linetype = "dashed") +
-  coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5), crs = st_crs(4326))
+  coord_sf(xlim = c(-70.5, -66), ylim = c(40, 42.5), crs = st_crs(4326)) +
+  scale_y_continuous(breaks = c(40, 41, 42))
 ```
 
 Thanks so much for viewing! Please feel free to reach out to me at `dylan.titmuss@whoi.edu` with any questions or comments.
