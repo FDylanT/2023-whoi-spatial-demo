@@ -6,7 +6,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-**Goal:** Plot spatial point and polygon data on a map created from a Google Earth image or from bathymetric data. As with other ggplot applications, this method of spatial visualisation provides widely flexible options for adding or modifying elements of a plot, such as in the example(s) below. 
+**Goal:** Plot spatial point and polygon data on a map created from a Google Earth image or from bathymetric data. As with other ggplot applications, this method of spatial visualisation provides widely flexible options for adding or modifying elements of a plot, such as in the example(s) below.
 
 ## Libraries we'll use
 
