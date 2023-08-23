@@ -122,7 +122,7 @@ Georges <- Georges +
 Georges
 ```
 
-### a) ...using a satellite image
+### b) ...using a satellite image
 
 #### Register Google API key
 
@@ -131,7 +131,7 @@ To obtain an API key and enable services, go to <https://mapsplatform.google.com
 My next code chunk is hidden here, but the function to register your API key in an R session takes the form `register_google(key = "PERSONAL API KEY")`.
 
 ```{r, include = FALSE}
-register_google(key = "PERSONAL API KEY")
+register_google(key = "AIzaSyBn1OxFq4DMK79J4qHmQoBvFlbHbeImABw")
 ```
 
 #### Extract satellite map from Google Maps
@@ -228,7 +228,7 @@ Georges +
 #### Import shapefile of scallop fishing management zones
 
 ```{r}
-GB <- st_read("~/Desktop/Repos/ScallopRSA2021/data/2020SAMZones/GB_Estimation_Areas_2019_UTM19_PDT_SFModified.shp")
+GB <- st_read("~/Desktop/Repos/ScallopRSA2021/data/SAM-zones/GB_Estimation_Areas_2019_UTM19_PDT_SFModified.shp")
 ```
 
 Note that the innate CRS of this polygon collection is NAD83 / UTM zone 19N (which is EPSG:26919), *not* WGS 84; therefore it is important that we set the CRS to EPSG:4326 in `coord_sf()` in order to align with our existing basemap.
